@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hasil Perbandingan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="https://unpkg.com/img-comparison-slider@8/dist/index.js"></script>
+  <style>
+    body {
+      background:
+        linear-gradient(120deg, rgba(226, 232, 240, 0.6), rgba(236, 253, 245, 0.6)),
+        #f1f5f9;
+    }
+
+    .compare-shell {
+      width: fit-content;
+      max-width: 100%;
+      margin-inline: auto;
+      border-radius: 0.8rem;
+      overflow: hidden;
+      border: 1px solid #cbd5e1;
+      background: #0b1220;
+      line-height: 0;
+    }
+
+    img-comparison-slider {
+      --divider-width: 2px;
+      --divider-color: rgba(255, 255, 255, 0.85);
+      --divider-shadow: 0 0 0 1px rgba(15, 23, 42, 0.35);
+      --default-handle-width: 44px;
+      --default-handle-color: rgba(255, 255, 255, 0.95);
+      --default-handle-opacity: 1;
+      --default-handle-shadow: 0 2px 10px rgba(15, 23, 42, 0.35);
+      width: 100%;
+      max-height: 78vh;
+      touch-action: pan-y;
+      direction: rtl;
+    }
+
+    img-comparison-slider img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: contain;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .tag {
+      position: absolute;
+      top: .75rem;
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      padding: .22rem .5rem;
+      border-radius: .4rem;
+      background: rgba(15, 23, 42, .65);
+      color: white;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .viewer-wrap {
+      position: relative;
+      width: fit-content;
+      max-width: 100%;
+      margin-inline: auto;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800">
+  <main class="mx-auto max-w-6xl px-4 py-8 sm:py-12">
+    <a href="{{ url_for('index') }}" class="inline-flex rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-50">Upload Lagi</a>
+
+    <section class="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl sm:p-6">
+      <h1 class="mb-4 text-xl font-bold sm:text-2xl">Geser untuk Membandingkan</h1>
+
+      <div class="viewer-wrap">
+        <div class="tag left-3">Before</div>
+        <div class="tag right-3">After</div>
+
+        <div id="compareShell" class="compare-shell">
+          <img-comparison-slider id="compareSlider" value="50" keyboard="enabled" dir="rtl">
+            <img slot="before" src="{{ before_url }}" alt="Before image" />
+            <img slot="after" src="{{ after_url }}" alt="After image" />
+          </img-comparison-slider>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const shell = document.getElementById('compareShell');
+    const slider = document.getElementById('compareSlider');
+    const afterImg = slider.querySelector('img[slot="after"]');
+
+    function fitToImage() {
+      if (!afterImg.naturalWidth || !afterImg.naturalHeight) return;
+      const maxWidth = window.innerWidth - 42;
+      const maxHeight = Math.max(window.innerHeight * 0.78, 320);
+      const widthScale = maxWidth / afterImg.naturalWidth;
+      const heightScale = maxHeight / afterImg.naturalHeight;
+      const scale = Math.min(widthScale, heightScale, 1);
+      const width = Math.max(280, Math.round(afterImg.naturalWidth * scale));
+
+      shell.style.width = `${width}px`;
+      slider.style.width = `${width}px`;
+    }
+
+    if (afterImg.complete) {
+      fitToImage();
+    } else {
+      afterImg.addEventListener('load', fitToImage);
+    }
+
+    window.addEventListener('resize', fitToImage);
+  </script>
+</body>
+</html>

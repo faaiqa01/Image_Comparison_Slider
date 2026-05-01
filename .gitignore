@@ -1,0 +1,61 @@
+# Python bytecode/cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+.python-version
+
+# Packaging/build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Test/coverage/type-check artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+.nox/
+
+# Flask/runtime/local env files
+instance/
+.env
+.env.*
+*.env
+*.local
+*.log
+
+# Local databases
+*.sqlite
+*.sqlite3
+*.db
+
+# Local uploads/temp data
+uploads/*
+!uploads/.gitkeep
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+*.bak
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project docs (local only)
+prd.md

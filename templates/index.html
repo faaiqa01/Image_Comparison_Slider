@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Comparison Slider</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="https://unpkg.com/img-comparison-slider@8/dist/index.js"></script>
+  <style>
+    body {
+      background:
+        radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.14), transparent 40%),
+        radial-gradient(circle at 90% 90%, rgba(16, 185, 129, 0.14), transparent 35%),
+        #f8fafc;
+    }
+    .compare-shell {
+      width: fit-content;
+      max-width: 100%;
+      margin-inline: auto;
+      border-radius: 0.8rem;
+      overflow: hidden;
+      border: 1px solid #cbd5e1;
+      background: #0b1220;
+      line-height: 0;
+    }
+    img-comparison-slider {
+      --divider-width: 2px;
+      --divider-color: rgba(255, 255, 255, 0.85);
+      --divider-shadow: 0 0 0 1px rgba(15, 23, 42, 0.35);
+      --default-handle-width: 1px;
+      --default-handle-color: transparent;
+      --default-handle-opacity: 0;
+      --default-handle-shadow: none;
+      display: block;
+      width: 100%;
+      touch-action: pan-y;
+      direction: rtl;
+    }
+    img-comparison-slider img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+    .tag {
+      position: absolute;
+      top: .75rem;
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      padding: .22rem .5rem;
+      border-radius: .4rem;
+      background: rgba(15, 23, 42, .65);
+      color: white;
+      z-index: 5;
+      pointer-events: none;
+    }
+    .viewer-wrap {
+      position: relative;
+      width: fit-content;
+      max-width: 100%;
+      margin-inline: auto;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800">
+  <main class="mx-auto max-w-6xl px-4 py-10 sm:py-16">
+    <section class="rounded-2xl border border-slate-200 bg-white/85 p-6 shadow-xl backdrop-blur sm:p-8">
+      <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Image Comparison Slider</h1>
+      <p class="mt-2 text-sm text-slate-600">Unggah dua gambar lalu bandingkan perbedaan secara interaktif.</p>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="mt-4 space-y-2">
+        {% for category, message in messages %}
+        {% if category == "success" %}
+        <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{{ message }}</div>
+        {% else %}
+        <div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ message }}</div>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endwith %}
+
+      <form id="uploadForm" action="{{ url_for('compare') }}" method="post" enctype="multipart/form-data" class="mt-6 space-y-5">
+        <div class="grid gap-5 sm:grid-cols-2">
+          <label class="block">
+            <span class="mb-2 block text-sm font-semibold">Gambar A (Before)</span>
+            <input type="file" name="image_a" id="imageA" accept=".jpg,.jpeg,.png,image/jpeg,image/png" required
+                   class="block w-full cursor-pointer rounded-lg border border-slate-300 bg-slate-50 p-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-white hover:file:bg-slate-700" />
+          </label>
+          <label class="block">
+            <span class="mb-2 block text-sm font-semibold">Gambar B (After)</span>
+            <input type="file" name="image_b" id="imageB" accept=".jpg,.jpeg,.png,image/jpeg,image/png" required
+                   class="block w-full cursor-pointer rounded-lg border border-slate-300 bg-slate-50 p-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-teal-700 file:px-3 file:py-1.5 file:text-white hover:file:bg-teal-600" />
+          </label>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <p class="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Preview A</p>
+            <img id="previewA" src="{{ before_url or '' }}" class="aspect-video w-full rounded-lg border border-slate-200 bg-slate-100 object-contain" alt="Preview gambar A" />
+          </div>
+          <div>
+            <p class="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Preview B</p>
+            <img id="previewB" src="{{ after_url or '' }}" class="aspect-video w-full rounded-lg border border-slate-200 bg-slate-100 object-contain" alt="Preview gambar B" />
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="submitBtn" type="submit"
+                  class="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700">
+            <svg id="loadingSpinner" class="hidden h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle class="opacity-30" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-90" d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" stroke-width="4"></path>
+            </svg>
+            <span>Bandingkan Gambar</span>
+          </button>
+          <button id="resetBtn" type="button"
+                  class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+            Reset
+          </button>
+        </div>
+      </form>
+      <form id="resetForm" action="{{ url_for('reset') }}" method="post" class="hidden"></form>
+    </section>
+
+    {% if before_url and after_url %}
+    <section class="mt-6 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-xl backdrop-blur sm:p-6">
+      <h2 class="mb-4 text-xl font-bold sm:text-2xl">Geser untuk Membandingkan</h2>
+      <div class="viewer-wrap">
+        <div class="tag left-3">Before</div>
+        <div class="tag right-3">After</div>
+        <div id="compareShell" class="compare-shell">
+          <img-comparison-slider id="compareSlider" value="50" keyboard="enabled" dir="rtl">
+            <img slot="before" src="{{ before_url }}" alt="Before image" />
+            <img slot="after" src="{{ after_url }}" alt="After image" />
+          </img-comparison-slider>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+  </main>
+
+  <script>
+    const imageAInput = document.getElementById('imageA');
+    const imageBInput = document.getElementById('imageB');
+    const previewA = document.getElementById('previewA');
+    const previewB = document.getElementById('previewB');
+    const form = document.getElementById('uploadForm');
+    const resetForm = document.getElementById('resetForm');
+    const resetBtn = document.getElementById('resetBtn');
+    const spinner = document.getElementById('loadingSpinner');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function attachPreview(input, img) {
+      input.addEventListener('change', () => {
+        const file = input.files?.[0];
+        if (!file) {
+          img.removeAttribute('src');
+          return;
+        }
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    attachPreview(imageAInput, previewA);
+    attachPreview(imageBInput, previewB);
+
+    form.addEventListener('submit', () => {
+      spinner.classList.remove('hidden');
+      submitBtn.disabled = true;
+      submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+    });
+
+    resetBtn.addEventListener('click', () => {
+      resetForm.submit();
+    });
+
+    const slider = document.getElementById('compareSlider');
+    const shell = document.getElementById('compareShell');
+    if (slider && shell) {
+      const afterImg = slider.querySelector('img[slot="after"]');
+      function fitToImage() {
+        if (!afterImg.naturalWidth || !afterImg.naturalHeight) return;
+        const maxWidth = window.innerWidth - 42;
+        const maxHeight = Math.max(window.innerHeight * 0.72, 280);
+        const widthScale = maxWidth / afterImg.naturalWidth;
+        const heightScale = maxHeight / afterImg.naturalHeight;
+        const scale = Math.min(widthScale, heightScale, 1);
+        const width = Math.max(280, Math.round(afterImg.naturalWidth * scale));
+        const ratio = `${afterImg.naturalWidth} / ${afterImg.naturalHeight}`;
+        shell.style.width = `${width}px`;
+        shell.style.aspectRatio = ratio;
+        slider.style.width = `${width}px`;
+        slider.style.aspectRatio = ratio;
+      }
+      if (afterImg.complete) {
+        fitToImage();
+      } else {
+        afterImg.addEventListener('load', fitToImage);
+      }
+      window.addEventListener('resize', fitToImage);
+    }
+
+    const hasActiveComparison = Boolean(slider);
+    if (hasActiveComparison) {
+      window.addEventListener('beforeunload', (event) => {
+        event.preventDefault();
+        event.returnValue = '';
+      });
+
+      window.addEventListener('unload', () => {
+        navigator.sendBeacon('{{ url_for("reset_silent") }}');
+      });
+    }
+  </script>
+</body>
+</html>
