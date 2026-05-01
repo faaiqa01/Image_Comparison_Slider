@@ -4,7 +4,7 @@ import uuid
 from pathlib import Path
 
 from flask import Flask, flash, redirect, render_template, request, send_from_directory, session, url_for
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 from werkzeug.utils import secure_filename
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -30,7 +30,7 @@ def cleanup_old_uploads() -> None:
                 pass
 
 
-def validate_image_and_get_ext(file_storage, field_name: str) -> str:
+def validate_image(file_storage, field_name: str) -> None:
     if not file_storage or file_storage.filename == "":
         raise ValueError(f"{field_name} wajib diunggah.")
 
@@ -49,15 +49,43 @@ def validate_image_and_get_ext(file_storage, field_name: str) -> str:
         raise ValueError(f"{field_name} harus berformat JPG/JPEG/PNG.")
 
     file_storage.stream.seek(0)
-    return ".jpg" if img.format == "JPEG" else ".png"
+    return None
 
 
-def save_uploaded_file(file_storage, original_name: str, suffix: str, extension: str) -> str:
+def pad_images_to_same_canvas(file_a, file_b):
+    img_a = Image.open(file_a.stream).convert("RGBA")
+    img_b = Image.open(file_b.stream).convert("RGBA")
+
+    target_width = max(img_a.width, img_b.width)
+    target_height = max(img_a.height, img_b.height)
+    target_size = (target_width, target_height)
+
+    padded_a = ImageOps.pad(
+        img_a,
+        target_size,
+        method=Image.Resampling.LANCZOS,
+        color=(0, 0, 0, 0),
+        centering=(0.5, 0.5),
+    )
+    padded_b = ImageOps.pad(
+        img_b,
+        target_size,
+        method=Image.Resampling.LANCZOS,
+        color=(0, 0, 0, 0),
+        centering=(0.5, 0.5),
+    )
+
+    file_a.stream.seek(0)
+    file_b.stream.seek(0)
+    return padded_a, padded_b
+
+
+def save_processed_image(image: Image.Image, original_name: str, suffix: str) -> str:
     safe_name = secure_filename(original_name) or "image"
     stem = Path(safe_name).stem
-    file_name = f"{uuid.uuid4().hex}_{stem}_{suffix}{extension}"
+    file_name = f"{uuid.uuid4().hex}_{stem}_{suffix}.png"
     out_path = UPLOAD_DIR / file_name
-    file_storage.save(out_path)
+    image.save(out_path, format="PNG", optimize=True)
     return file_name
 
 
@@ -86,14 +114,16 @@ def compare():
     try:
         file_a = request.files.get("image_a")
         file_b = request.files.get("image_b")
-        ext_a = validate_image_and_get_ext(file_a, "Gambar A")
-        ext_b = validate_image_and_get_ext(file_b, "Gambar B")
+        validate_image(file_a, "Gambar A")
+        validate_image(file_b, "Gambar B")
     except ValueError as err:
         flash(str(err), "error")
         return redirect(url_for("index"))
 
-    before_name = save_uploaded_file(file_a, file_a.filename, "before", ext_a)
-    after_name = save_uploaded_file(file_b, file_b.filename, "after", ext_b)
+    before_image, after_image = pad_images_to_same_canvas(file_a, file_b)
+
+    before_name = save_processed_image(before_image, file_a.filename, "before")
+    after_name = save_processed_image(after_image, file_b.filename, "after")
     session["active_uploads"] = [before_name, after_name]
 
     return render_template(
