@@ -10,6 +10,7 @@ Aplikasi web sederhana untuk membandingkan dua gambar (`Before` vs `After`) deng
 - Preview gambar sebelum proses compare
 - Tombol `Reset` untuk menghapus hasil compare aktif
 - File upload aktif tetap tersedia sampai di-reset atau dibersihkan otomatis (cleanup berdasarkan umur file)
+- **Dark Mode / Light Mode** — toggle tema gelap & terang dengan persistensi via `localStorage` (mengikuti preferensi OS secara default)
 
 ## Stack
 
@@ -26,7 +27,8 @@ compare image/
 ├─ app.py
 ├─ requirements.txt
 ├─ templates/
-│  └─ index.html
+│  ├─ index.html
+│  └─ result.html
 ├─ uploads/
 │  └─ .gitkeep
 └─ README.md
